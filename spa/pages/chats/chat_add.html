@@ -1,0 +1,117 @@
+<div class="ui segment" x-data="newChat">
+    <h2 class="ui header">
+        <i class="comment alternate icon"></i>
+        <div class="content">
+            New Chat
+            <div class="sub header">Create a new chat message</div>
+        </div>
+    </h2>
+   
+    <div class="ui message" :class="messageType" x-show="message.length > 0">
+        <i class="close icon" @click="message = ''"></i>
+        <div x-text="message"></div>
+    </div>
+   
+    <form class="ui form" @submit.prevent="submitChat">
+        <div class="field" :class="{ error: errors.username }">
+            <label>Username</label>
+            <input type="text" x-model="chat.username" placeholder="Enter your username">
+            <div class="ui pointing red basic label" x-show="errors.username" x-text="errors.username"></div>
+        </div>
+       
+        <div class="field" :class="{ error: errors.chat_message }">
+            <label>Message</label>
+            <textarea x-model="chat.chat_message" placeholder="Enter your message"></textarea>
+            <div class="ui pointing red basic label" x-show="errors.chat_message" x-text="errors.chat_message"></div>
+        </div>
+       
+        <button class="ui primary button" type="submit" :disabled="submitting">
+            <i class="send icon"></i> Send Message
+        </button>
+        <button class="ui button" type="button" @click="resetForm">
+            <i class="undo icon"></i> Reset
+        </button>
+    </form>
+</div>
+
+<script>
+    Alpine.data("newChat", () => ({
+        chat: {
+            username: "",
+            chat_message: ""
+        },
+        errors: {
+            username: "",
+            chat_message: ""
+        },
+        message: "",
+        messageType: "",
+        submitting: false,
+       
+        submitChat() {
+            // Reset errors
+            this.errors = {
+                username: "",
+                chat_message: ""
+            };
+           
+            // Validate form
+            let isValid = true;
+           
+            if (!this.chat.username.trim()) {
+                this.errors.username = "Username is required";
+                isValid = false;
+            }
+           
+            if (!this.chat.chat_message.trim()) {
+                this.errors.chat_message = "Message is required";
+                isValid = false;
+            }
+           
+            if (!isValid) return;
+           
+            this.submitting = true;
+           
+            // Submit form
+            fetch(`${Alpine.store("settings").apiBaseUrl}/exam/chat/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(this.chat)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to send chat message");
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.message = "Chat message sent successfully!";
+                this.messageType = "green";
+                this.resetForm();
+               
+                // Optional: Navigate to chat list after successful submission
+                // setTimeout(() => navigateTo('chat/chat_list'), 2000);
+            })
+            .catch(error => {
+                this.message = error.message || "Failed to send message";
+                this.messageType = "red";
+            })
+            .finally(() => {
+                this.submitting = false;
+            });
+        },
+       
+        resetForm() {
+            this.chat = {
+                username: "",
+                chat_message: ""
+            };
+            this.errors = {
+                username: "",
+                chat_message: ""
+            };
+        }
+    }));
+</script>

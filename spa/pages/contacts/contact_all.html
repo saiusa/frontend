@@ -1,0 +1,213 @@
+<div class="ui container" style="margin-top: 20px;">
+    <div class="ui raised segment" x-data="contactList">
+        <!-- Header Section -->
+        <h2 class="ui header">
+            <i class="address book blue icon"></i>
+            <div class="content">
+                Contact List
+                <div class="sub header">Manage your contacts</div>
+            </div>
+        </h2>
+
+        <!-- Message Display -->
+        <div class="ui message" x-show="message" :class="messageType">
+            <i class="close icon" @click="message = ''"></i>
+            <div class="content">
+                <p x-text="message"></p>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="ui active dimmer" x-show="loading">
+            <div class="ui text loader">Loading Contacts...</div>
+        </div>
+
+        <!-- Search and Add Contact Button -->
+        <div class="ui grid" style="margin-bottom: 1em;">
+            <div class="eight wide column">
+                <div class="ui fluid icon input">
+                    <input type="text" placeholder="Search contacts...">
+                    <i class="search icon"></i>
+                </div>
+            </div>
+            <div class="eight wide column right aligned">
+                <button class="ui primary button" onclick="navigateTo('contacts/contact_add')">
+                    <i class="plus icon"></i> New Contact
+                </button>
+            </div>
+        </div>
+
+        <!-- Contact List Table -->
+        <table class="ui padded celled striped table">
+            <thead>
+                <tr>
+                    <th class="four wide">Name</th>
+                    <th class="four wide">Contact Info</th>
+                    <th class="four wide">Address</th>
+                    <th class="four wide center aligned">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="person in paginatedData" :key="person.id">
+                    <tr>
+                        <td>
+                            <h4 class="ui image header">
+                                <i class="circular user blue icon"></i>
+                                <div class="content">
+                                    <span x-text="`${person.first_name} ${person.last_name}`"></span>
+                                </div>
+                            </h4>
+                        </td>
+                        <td>
+                            <div class="ui list">
+                                <div class="item">
+                                    <i class="mail icon"></i>
+                                    <div class="content" x-text="person.email"></div>
+                                </div>
+                                <div class="item">
+                                    <i class="phone icon"></i>
+                                    <div class="content" x-text="person.phone_number"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="ui label fluid">
+                                <i class="map marker alternate icon"></i>
+                                <span x-text="person.address"></span>
+                            </div>
+                        </td>
+                        <td class="center aligned">
+                            <div class="ui mini buttons">
+                                <button class="ui blue icon button" @click="viewContact(person.id)" title="View Details">
+                                    <i class="eye icon"></i>
+                                </button>
+                                <button class="ui teal icon button" @click="editContact(person.id)" title="Edit Contact">
+                                    <i class="edit icon"></i>
+                                </button>
+                                <button class="ui red icon button" @click="deleteContact(person.id)" title="Delete Contact">
+                                    <i class="trash icon"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="4">
+                        <div class="ui grid">
+                            <div class="eight wide column">
+                                <div class="ui mini statistics">
+                                    <div class="blue statistic">
+                                        <div class="value" x-text="Alpine.store('GlobalVariable').contacts.total">
+                                        </div>
+                                        <div class="label">Total Contacts</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="eight wide column right aligned">
+                                <div class="ui pagination mini menu">
+                                    <a class="item" :class="{ disabled: currentPage === 1 }" @click="prevPage">
+                                        <i class="angle left icon"></i>
+                                    </a>
+                                    <div class="item">
+                                        <span x-text="currentPage"></span> of <span x-text="totalPages"></span>
+                                    </div>
+                                    <a class="item" :class="{ disabled: currentPage === totalPages }" @click="nextPage">
+                                        <i class="angle right icon"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<script>
+    Alpine.data("contactList", () => ({
+        contact: Alpine.reactive({ data: [] }),
+        message: "Loading contacts...",
+        pageSize: 10, // Number of records per page
+        currentPage: 1,
+        loading: true,
+        message: '',
+        messageType: '',
+
+        fetchAllContactData() {
+            return new Promise((resolve, reject) => {
+                fetch(`${Alpine.store("settings").apiBaseUrl}/contact/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        this.contact.data = [...data.contacts];
+                        Alpine.store("GlobalVariable").contacts.data = [...this.contact.data];
+                        Alpine.store("GlobalVariable").contacts.total = this.contact.data.length;
+
+                        this.message = ""; // Clear loading message
+                        this.loading = false; // Set loading to false after data is fetched
+                        resolve(data.contacts);
+                    })
+                    .catch(() => {
+                        this.message = "Failed to load contact data"; // Handle errors
+                        this.loading = false; // Set loading to false even if there's an error
+                        reject("Failed to load data");
+                    });
+            });
+        },
+
+        deleteContact(id) {
+            fetch(`${Alpine.store("settings").apiBaseUrl}/contacts/${id}/`, {
+                method: "DELETE", // Use DELETE to remove the contact
+                headers: { "Content-Type": "application/json" },
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to delete contact");
+                    }
+                    return response.json(); // Assuming the API returns a response even for DELETE
+                })
+                .then(data => {
+                    this.contact.data = this.contact.data.filter(findID => findID.id !== id);
+
+                    this.message = "Contact deleted successfully!";
+                    this.messageType = "green"; // Green for success
+                    setTimeout(() => { this.message = ""; }, 3000);
+                })
+                .catch(error => {
+                    this.message = "Error occurred while deleting contact.";
+                    this.messageType = "red"; // Red for error
+                });
+        },
+
+        viewContact(id) {
+            navigateTo(`contacts/contact_single?id=${id}`);
+        },
+
+        editContact(id) {
+            navigateTo(`contacts/contact_edit?id=${id}`);
+        },
+
+        get totalPages() {
+            return Math.ceil(this.contact.data.length / this.pageSize);
+        },
+
+        get paginatedData() {
+            let start = (this.currentPage - 1) * this.pageSize;
+            return this.contact.data.slice(start, start + this.pageSize);
+        },
+
+        nextPage() {
+            if (this.currentPage < this.totalPages) this.currentPage++;
+        },
+
+        prevPage() {
+            if (this.currentPage > 1) this.currentPage--;
+        },
+
+        init() {
+            this.fetchAllContactData(); // Fetch data when the component initializes
+        }
+    }));
+</script>
