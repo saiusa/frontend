@@ -59,41 +59,28 @@
             border-top: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Button Styles */
-        .auth-buttons .ui.button {
-            margin: 0 0.3em;
-        }
     </style>
+
 </head>
 <body>
     <!-- Navigation Menu -->
     <div class="ui inverted menu blue" x-data>
         <div class="ui container">
-            <!-- Brand/Logo -->
-            <a class="header item" @click.prevent="navigateTo('home/welcome')">
-                <i class="home large icon"></i>
-                <strong>Home</strong>
-            </a>
-            
             <!-- Main Navigation -->
-            <a class="item" @click.prevent="navigateTo('about/about')">
-                <i class="info circle icon"></i> About
-            </a>
-
-            <a class="item" @click.prevent="navigateTo('services/service')">
-                <i class="cogs icon"></i> Services
+            <a class="header item" @click.prevent="navigateTo('home/welcome')">
+                <i class="home large icon"></i>Home
             </a>
 
             <!-- Products Dropdown -->
             <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open">
-                <i class="box icon"></i> Products 
+                <i class="shopping bag icon"></i> Products
                 <i class="dropdown icon"></i>
                 <div class="menu" x-show="open" @click.outside="open = false">
-                    <a class="item" @click.prevent="navigateTo('products/product_add'); open = false;">
-                        <i class="plus icon"></i> Add Product
+                    <a class="item" @click.prevent="navigateTo('products/product_display'); open = false;">
+                        <i class="eye icon"></i> View Products
                     </a>
-                    <a class="item" @click.prevent="navigateTo('products/product_all'); open = false;">
-                        <i class="list icon"></i> All Products
+                    <a class="item" @click.prevent="navigateTo('products/product_cartdisplay'); open = false;">
+                        <i class="shopping cart icon"></i> Cart Display
                     </a>
                 </div>
             </div>
@@ -118,20 +105,6 @@
                     <a class="item" @click.prevent="navigateTo('chats/chat_list'); open = false;">
                         <i class="comments icon"></i> Chat List
                     </a>
-                </div>
-            </div>
-
-            <!-- Auth Buttons -->
-            <div class="right menu">
-                <div class="item auth-buttons">
-                    <button class="ui inverted button" style="margin-right: 0.5em;" @click.prevent="navigateTo('auth/login')">
-                        <i class="sign in icon"></i>
-                        Login
-                    </button>
-                    <button class="ui inverted primary button" @click.prevent="navigateTo('auth/signup')">
-                        <i class="user plus icon"></i>
-                        Sign Up
-                    </button>
                 </div>
             </div>
         </div>

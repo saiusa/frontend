@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Display</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+</head>
+<body>
+    <!-- Back Arrow Button -->
+    <div class="ui container" style="margin-top: 1rem;">
+        <button class="ui icon button" onclick="navigateTo('products/product_display')">
+            <i class="arrow left icon"></i> Back to Products
+        </button>
+    </div>
+
+    <div class="ui container" style="margin-top: 2rem;" x-data="manageCart">
+        <h2 class="ui header">
+            <i class="shopping cart icon"></i>
+            <div class="content">
+                Your Cart
+                <div class="sub header">Review your selected items</div>
+            </div>
+        </h2>
+        <div class="ui divider"></div>
+
+        <div class="ui divided items">
+            <template x-for="item in cart" :key="item.name">
+                <div class="item">
+                    <div class="image">
+                        <img :src="item.image" :alt="item.name">
+                    </div>
+                    <div class="content">
+                        <a class="header" x-text="item.name"></a>
+                        <div class="meta">
+                            <span class="price" x-text="'$' + item.price.toFixed(2)"></span>
+                        </div>
+                        <div class="description">
+                            <div class="ui input">
+                                <input type="number" min="1" x-model="item.quantity" @change="updateCart(item)">
+                            </div>
+                        </div>
+                        <div class="extra">
+                            <button class="ui red button" @click="removeFromCart(item)">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="ui divider"></div>
+        <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
+        <button class="ui primary button" onclick="navigateTo('products/product_checkout')">Proceed to Checkout</button>
+    </div>
+
+    <script>
+        Alpine.data("manageCart", () => ({
+            cart: JSON.parse(localStorage.getItem('cart')) || [],
+            get totalPrice() {
+                return this.cart.reduce((total, item) => total + item.price * item.quantity, 0);
+            },
+            updateCart(item) {
+                localStorage.setItem('cart', JSON.stringify(this.cart));
+            },
+            removeFromCart(item) {
+                this.cart = this.cart.filter(cartItem => cartItem.name !== item.name);
+                localStorage.setItem('cart', JSON.stringify(this.cart));
+            },
+            checkout() {
+                alert('Proceeding to checkout...');
+                // Add checkout logic here
+            }
+        }));
+    </script>
+</body>
+</html>

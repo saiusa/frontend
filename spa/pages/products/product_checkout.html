@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+</head>
+<body>
+    <div class="ui container" style="margin-top: 1rem;">
+        <button class="ui icon button" onclick="navigateTo('products/product_cartdisplay')">
+            <i class="arrow left icon"></i> Back to Cart
+        </button>
+    </div>
+    <div class="ui container" style="margin-top: 2rem;" x-data="manageCheckout">
+        <h2 class="ui header">
+            <i class="credit card icon"></i>
+            <div class="content">
+                Checkout
+                <div class="sub header">Complete your purchase</div>
+            </div>
+        </h2>
+        <div class="ui divider"></div>
+
+        <form class="ui form">
+            <h4 class="ui dividing header">Billing Information</h4>
+            <div class="field">
+                <label>Name</label>
+                <input type="text" placeholder="Full Name" x-model="billingInfo.name">
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input type="email" placeholder="Email Address" x-model="billingInfo.email">
+            </div>
+            <div class="field">
+                <label>Address</label>
+                <input type="text" placeholder="Shipping Address" x-model="billingInfo.address">
+            </div>
+            <div class="field">
+                <label>Payment Method</label>
+                <select class="ui dropdown" x-model="billingInfo.paymentMethod">
+                    <option value="" disabled selected class="placeholder-option">Select a payment method</option>
+                    <option value="credit_card">Cash on Delivery</option>
+                    <option value="credit_card">Credit/Debit Card</option>
+                    <option value="paypal">PayPal</option>
+                </select>
+            </div>
+
+            <h4 class="ui dividing header">Order Summary</h4>
+            <div class="ui divided items">
+                <template x-for="item in cart" :key="item.name">
+                    <div class="item">
+                        <div class="content">
+                            <a class="header" x-text="item.name"></a>
+                            <div class="meta">
+                                <span class="price" x-text="'$' + (item.price * item.quantity).toFixed(2)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
+
+            <button class="ui primary button" @click.prevent="confirmOrder">Confirm Order</button>
+        </form>
+    </div>
+
+    <script>
+        Alpine.data("manageCheckout", () => ({
+            cart: JSON.parse(localStorage.getItem('cart')) || [],
+            totalPrice: 0,
+            billingInfo: {
+                name: '',
+                email: '', 
+                address: '',
+                paymentMethod: ''
+            },
+
+            init() {
+                this.calculateTotalPrice();
+            },
+
+            calculateTotalPrice() {
+                this.totalPrice = this.cart.reduce((sum, product) => sum + product.price * product.quantity, 0);
+            },
+
+            confirmOrder() {
+                if (this.billingInfo.name && this.billingInfo.address && this.billingInfo.paymentMethod && this.billingInfo.email) {
+                    alert(`Order confirmed!\n\nName: ${this.billingInfo.name}\nEmail: ${this.billingInfo.email}\nAddress: ${this.billingInfo.address}\nPayment Method: ${this.billingInfo.paymentMethod}\nTotal: $${this.totalPrice.toFixed(2)}`);
+                    // Clear cart after order
+                    localStorage.removeItem('cart');
+                    // Navigate back to the product display page
+                    window.location.href = '/spa/pages/products/product_display.html';
+                } else {
+                    alert("Please fill out all fields.");
+                }
+            }
+        }));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            $('.ui.dropdown').dropdown(); // Initialize Semantic UI dropdown
+        });
+    </script>
+</body>
+</html>
