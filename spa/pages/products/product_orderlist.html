@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
+    <script src="../../config/localui/semantic.min.js"></script>
+</head>
+<body>
+    <div class="ui container" style="margin-top: 1rem;">
+        <button class="ui icon button" @click="navigateTo('products/product_display')">
+            <i class="arrow left icon"></i> Back to Albums
+        </button>
+    </div>
+    <div class="ui container" style="margin-top: 2rem;" x-data="manageOrders">
+        <h2 class="ui header">
+            <i class="list icon"></i>
+            <div class="content">
+                Order History
+                <div class="sub header">View your past orders</div>
+            </div>
+        </h2>
+        <div class="ui divider"></div>
+
+        <div class="ui cards">
+            <template x-for="order in $store.GlobalVariable.orders.data" :key="order.id">
+                <div class="ui card">
+                    <div class="content">
+                        <div class="header" x-text="'Order #' + order.id"></div>
+                        <div class="meta">
+                            <span x-text="'Date: ' + new Date(order.created_at).toLocaleDateString()"></span>
+                        </div>
+                        <div class="description">
+                            <p><strong>Customer:</strong> <span x-text="order.customer_name"></span></p>
+                            <p><strong>Email:</strong> <span x-text="order.customer_email"></span></p>
+                            <p><strong>Address:</strong> <span x-text="order.customer_address"></span></p>
+                            <p><strong>Payment Method:</strong> <span x-text="formatPaymentMethod(order.payment_method)"></span></p>
+                            <p><strong>Total:</strong> $<span x-text="order.total_amount.toFixed(2)"></span></p>
+                            <h4>Items:</h4>
+                            <ul>
+                                <template x-for="item in order.items" :key="item.product_id">
+                                    <li x-text="item.quantity + ' x ' + item.product_name + ' ($' + item.price.toFixed(2) + ')'"></li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        Alpine.data("manageOrders", () => ({
+            formatPaymentMethod(method) {
+                const methods = {
+                    'COD': 'Cash on Delivery',
+                    'CARD': 'Credit/Debit Card',
+                    'PAYPAL': 'PayPal'
+                };
+                return methods[method] || method;
+            }
+        }));
+    </script>
+</body>
+</html>

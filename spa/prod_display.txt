@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Display</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+    <style>
+        .ui.button:hover {
+            background-color: #2185d0 !important;
+            color: white !important;
+        }
+        .stock-badge {
+            padding: 0.5em;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .stock-badge.in-stock {
+            background-color: #21ba45;
+            color: white;
+        }
+        .stock-badge.out-of-stock {
+            background-color: #db2828;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui container" style="margin-top: 2rem;" x-data="manageProducts">
+
+        <!-- Page Header -->
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h2 class="ui header">
+                    <i class="shopping bag icon"></i>
+                    <div class="content">
+                        Products
+                        <div class="sub header">Browse our collection of albums and merchandise</div>
+                    </div>
+                </h2>
+            </div>
+            <div class="eight wide column right aligned">
+                <h4>Cart: <span x-text="cart.length"></span> items</h4>
+                <button class="ui primary button" onclick="navigateTo('products/product_cartdisplay')">
+                    <i class="shopping cart icon"></i> View Cart
+                </button>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+
+        <!-- Search Bar -->
+        <div class="ui fluid icon input" style="margin-bottom: 2rem;">
+            <input type="text" placeholder="Search products..." x-model="searchQuery" @input="filterProducts">
+            <i class="search icon"></i>
+        </div>
+
+        <!-- Albums Section -->
+        <h3 class="ui dividing header">Albums</h3>
+        <div class="ui stackable three column grid">
+            <template x-for="product in filteredAlbums" :key="product.name">
+                <div class="column">
+                    <div class="ui fluid card">
+                        <div class="image">
+                            <img :src="product.image || '../../product_image/album/placeholder.jpg'" :alt="product.name">
+                        </div>
+                        <div class="content">
+                            <a class="header" x-text="product.name"></a>
+                            <div class="meta">
+                                <span class="price" x-text="'$' + product.price.toFixed(2)"></span>
+                            </div>
+                            <div class="description">
+                                <span :class="product.stock > 0 ? 'stock-badge in-stock' : 'stock-badge out-of-stock'" 
+                                      x-text="product.stock > 0 ? 'In Stock (' + product.stock + ')' : 'Out of Stock (0)'"></span>
+                            </div>
+                        </div>
+                        <div class="extra content">
+                            <button class="ui green button" :disabled="product.stock === 0" @click="addToCart(product)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Merch Section -->
+        <h3 class="ui dividing header">Merch</h3>
+        <div class="ui stackable three column grid">
+            <template x-for="product in filteredMerch" :key="product.name">
+                <div class="column">
+                    <div class="ui fluid card">
+                        <div class="image">
+                            <img :src="product.image || '../../product_image/merch/placeholder.jpg'" :alt="product.name">
+                        </div>
+                        <div class="content">
+                            <a class="header" x-text="product.name"></a>
+                            <div class="meta">
+                                <span class="price" x-text="'$' + product.price.toFixed(2)"></span>
+                            </div>
+                            <div class="description">
+                                <span :class="product.stock > 0 ? 'stock-badge in-stock' : 'stock-badge out-of-stock'" 
+                                      x-text="product.stock > 0 ? 'In Stock (' + product.stock + ')' : 'Out of Stock (0)'"></span>
+                            </div>
+                        </div>
+                        <div class="extra content">
+                            <button class="ui green button" :disabled="product.stock === 0" @click="addToCart(product)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        Alpine.data("manageProducts", () => ({
+            cart: JSON.parse(localStorage.getItem('cart')) || [],
+            searchQuery: '',
+            albums: [
+                { name: 'LOVE YOURSELF 承 Her', price: 12.21, stock: 0, image: 'https://cdn-contents.weverseshop.io/public/shop/6b73c96a86f625f64c9a782c81ff2ae7.jpg?w=720&q=95', quantity: 1 },
+                { name: 'MAP OF THE SOUL : PERSONA', price: 12.13, stock: 20, image: 'https://cdn-contents.weverseshop.io/public/shop/01783d5e533d80c44a9b631e2a0018ff.jpg?w=720&q=95.png', quantity: 1 }
+            ],
+            merch: [
+                { name: 'BTS Magnet Set', price: 26.24, stock: 5, image: 'https://cdn-contents.weverseshop.io/public/shop/c02eb4cd9d6fc585408aae826010d42a.png?w=720&q=95', quantity: 1 },
+                { name: 'JungKook Seven Shirt', price: 89.38, stock: 2, image: 'https://cdn-contents.weverseshop.io/public/shop/aeed6f20e304d7689d91626fc724343f.png?w=720&q=95', quantity: 1 }
+            ],
+            filteredAlbums: [],
+            filteredMerch: [],
+            init() {
+                this.filteredAlbums = this.albums;
+                this.filteredMerch = this.merch;
+            },
+            filterProducts() {
+                const query = this.searchQuery.toLowerCase();
+                this.filteredAlbums = this.albums.filter(product => product.name.toLowerCase().includes(query));
+                this.filteredMerch = this.merch.filter(product => product.name.toLowerCase().includes(query));
+            },
+            addToCart(product) {
+                const existingProduct = this.cart.find(item => item.name === product.name);
+                if (existingProduct) {
+                    existingProduct.quantity += 1;
+                } else {
+                    this.cart.push({ ...product });
+                }
+                localStorage.setItem('cart', JSON.stringify(this.cart));
+                alert(`Added ${product.name} to cart!`);
+            }
+        }));
+    </script>
+</body>
+</html>

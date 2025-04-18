@@ -6,12 +6,13 @@
     <title>Cart Display</title>
     <link rel="stylesheet" href="../../config/localui/semantic.min.css">
     <script src="../../config/localjs/alpine.min.js" defer></script>
+    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
+    <script src="../../config/localui/semantic.min.js"></script>
 </head>
 <body>
-    <!-- Back Arrow Button -->
     <div class="ui container" style="margin-top: 1rem;">
-        <button class="ui icon button" onclick="navigateTo('products/product_display')">
-            <i class="arrow left icon"></i> Back to Products
+        <button class="ui icon button" @click="navigateTo('products/product_display')">
+            <i class="arrow left icon"></i> Back to Albums
         </button>
     </div>
 
@@ -20,13 +21,13 @@
             <i class="shopping cart icon"></i>
             <div class="content">
                 Your Cart
-                <div class="sub header">Review your selected items</div>
+                <div class="sub header">Review your selected albums</div>
             </div>
         </h2>
         <div class="ui divider"></div>
 
         <div class="ui divided items">
-            <template x-for="item in cart" :key="item.name">
+            <template x-for="item in $store.GlobalVariable.cart.data" :key="item.id">
                 <div class="item">
                     <div class="image">
                         <img :src="item.image" :alt="item.name">
@@ -38,11 +39,11 @@
                         </div>
                         <div class="description">
                             <div class="ui input">
-                                <input type="number" min="1" x-model="item.quantity" @change="updateCart(item)">
+                                <input type="number" min="1" x-model.number="item.quantity" @change="$store.GlobalFunctions.updateCartItem(item)">
                             </div>
                         </div>
                         <div class="extra">
-                            <button class="ui red button" @click="removeFromCart(item)">Remove</button>
+                            <button class="ui red button" @click="$store.GlobalFunctions.removeFromCart(item)">Remove</button>
                         </div>
                     </div>
                 </div>
@@ -51,25 +52,13 @@
 
         <div class="ui divider"></div>
         <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
-        <button class="ui primary button" onclick="navigateTo('products/product_checkout')">Proceed to Checkout</button>
+        <button class="ui primary button" @click="navigateTo('products/product_checkout')" :disabled="!$store.GlobalVariable.cart.data.length">Proceed to Checkout</button>
     </div>
 
     <script>
         Alpine.data("manageCart", () => ({
-            cart: JSON.parse(localStorage.getItem('cart')) || [],
             get totalPrice() {
-                return this.cart.reduce((total, item) => total + item.price * item.quantity, 0);
-            },
-            updateCart(item) {
-                localStorage.setItem('cart', JSON.stringify(this.cart));
-            },
-            removeFromCart(item) {
-                this.cart = this.cart.filter(cartItem => cartItem.name !== item.name);
-                localStorage.setItem('cart', JSON.stringify(this.cart));
-            },
-            checkout() {
-                alert('Proceeding to checkout...');
-                // Add checkout logic here
+                return $store.GlobalVariable.cart.data.reduce((total, item) => total + item.price * item.quantity, 0);
             }
         }));
     </script>

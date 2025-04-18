@@ -58,7 +58,6 @@
             background: #f8f9fa;
             border-top: 1px solid rgba(0,0,0,0.1);
         }
-
     </style>
 
 </head>
@@ -80,7 +79,10 @@
                         <i class="eye icon"></i> View Products
                     </a>
                     <a class="item" @click.prevent="navigateTo('products/product_cartdisplay'); open = false;">
-                        <i class="shopping cart icon"></i> Cart Display
+                        <i class="shopping cart icon"></i> Cart
+                    </a>
+                    <a class="item" @click.prevent="navigateTo('products/product_orderlist'); open = false;">
+                        <i class="list icon"></i> Order History
                     </a>
                 </div>
             </div>
