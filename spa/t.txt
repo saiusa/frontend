@@ -125,3 +125,35 @@
     <script defer src="script/app.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+Alpine.store("settings", {
+    apiBaseUrl: "http://172.17.100.14:3329/usa2/api",  
+    appName: "contact application",  
+});
+
+document.addEventListener("alpine:init", () => {
+    Alpine.store("settings", {
+        apiBaseUrl: "http://localhost:8017/api/products/", // Adjust to your backend URL
+        appName: "BTS Album Ecommerce",
+    });
+
+    Alpine.store("GlobalVariable", {
+        contacts: Alpine.reactive({ data: [], total: 0 }),
+        queryParams: Alpine.reactive({}),
+        products: Alpine.reactive({ data: [], total: 0 }),
+        cart: Alpine.reactive({ data: [], subtotal: 0, totalItems: 0 }),
+        orders: Alpine.reactive({ data: [], total: 0 }),
+        currentView: Alpine.reactive({ path: "products/product_display" }),
+    });
+
+    Alpine.store("GlobalFunctions", {
+        findContactById(id) {        
+            let contacts = Alpine.store("GlobalVariable").contacts.data;
+            let foundContact = contacts.find(c => Number(c.id) === Number(id));
+            return foundContact ? { ...foundContact } : {};
+        },    

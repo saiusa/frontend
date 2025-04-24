@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
+    <script src="../../config/localui/semantic.min.js"></script>
+</head>
+<body>
+    <div class="ui container" style="margin-top: 1rem;">
+        <button class="ui icon button" @click="navigateTo('products/product_cartdisplay')">
+            <i class="arrow left icon"></i> Back to Cart
+        </button>
+    </div>
+    <div class="ui container" style="margin-top: 2rem;" x-data="manageCheckout">
+        <h2 class="ui header">
+            <i class="credit card icon"></i>
+            <div class="content">
+                Checkout
+                <div class="sub header">Complete your album purchase</div>
+            </div>
+        </h2>
+        <div class="ui divider"></div>
+
+        <form class="ui form" @submit.prevent="confirmOrder">
+            <h4 class="ui dividing header">Billing Information</h4>
+            <div class="field">
+                <label>Name</label>
+                <input type="text" placeholder="Full Name" x-model="billingInfo.name">
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input type="email" placeholder="Email Address" x-model="billingInfo.email">
+            </div>
+            <div class="field">
+                <label>Address</label>
+                <input type="text" placeholder="Shipping Address" x-model="billingInfo.address">
+            </div>
+            <div class="field">
+                <label>Payment Method</label>
+                <select class="ui dropdown" x-model="billingInfo.payment_method">
+                    <option value="" disabled selected>Select a payment method</option>
+                    <option value="COD">Cash on Delivery</option>
+                    <option value="CARD">Credit/Debit Card</option>
+                    <option value="PAYPAL">PayPal</option>
+                </select>
+            </div>
+
+            <h4 class="ui dividing header">Order Summary</h4>
+            <div class="ui divided items">
+                <template x-for="item in $store.GlobalVariable.cart.data" :key="item.id">
+                    <div class="item">
+                        <div class="content">
+                            <a class="header" x-text="item.name"></a>
+                            <div class="meta">
+                                <span class="price" x-text="'$' + (item.price * item.quantity).toFixed(2)"></span>
+                                <span class="quantity" x-text="'Qty: ' + item.quantity"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
+
+            <button class="ui primary button" type="submit" :disabled="!$store.GlobalVariable.cart.data.length">Confirm Order</button>
+        </form>
+    </div>
+
+    <script>
+        Alpine.data("manageCheckout", () => ({
+            billingInfo: {
+                name: '',
+                email: '',
+                address: '',
+                payment_method: ''
+            },
+            get totalPrice() {
+                return $store.GlobalVariable.cart.data.reduce((sum, product) => sum + product.price * product.quantity, 0);
+            },
+            init() {
+                $('.ui.dropdown').dropdown();
+            },
+            async confirmOrder() {
+                if (!this.billingInfo.name || !this.billingInfo.email || !this.billingInfo.address || !this.billingInfo.payment_method) {
+                    alert('Please fill out all fields.');
+                    return;
+                }
+                if (!$store.GlobalVariable.cart.data.length) {
+                    alert('Cart is empty.');
+                    return;
+                }
+                const checkoutData = {
+                    cart_id: $store.GlobalVariable.cart.cart_id,
+                    customer_name: this.billingInfo.name,
+                    customer_email: this.billingInfo.email,
+                    customer_address: this.billingInfo.address,
+                    payment_method: this.billingInfo.payment_method,
+                    total_price: this.totalPrice
+                };
+                console.log('Sending checkout data:', checkoutData);
+                try {
+                    const response = await Alpine.store("GlobalFunctions").confirmCheckout(checkoutData);
+                    console.log('Checkout response:', response);
+                    alert(`Order confirmed!\n\nName: ${this.billingInfo.name}\nEmail: ${this.billingInfo.email}\nAddress: ${this.billingInfo.address}\nPayment Method: ${this.billingInfo.payment_method}\nTotal: $${this.totalPrice.toFixed(2)}`);
+                    navigateTo('products/product_orderlist');
+                } catch (error) {
+                    console.error('Failed to confirm checkout:', error);
+                    alert(`Failed to confirm order: ${error.message || 'Please try again.'}`);
+                }
+            },
+
+            init() {
+            this.fetchAllCheckoutData(); // Fetch data when the component initializes
+        }
+
+        }));
+    </script>
+</body>
+</html>

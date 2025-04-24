@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USA</title>
-   
-    <!-- External Dependencies -->
+    <title>BTS Album Ecommerce</title>
     <script defer src="config/localjs/alpine.min.js"></script>
     <link rel="stylesheet" href="config/localui/semantic.min.css">
     <script src="config/localjs/jquery-3.6.0.min.js"></script>
     <script src="config/localui/semantic.min.js"></script>
-
     <style>
         /* Navigation Styles */
         .ui.menu {
             border-radius: 0 !important;
             margin-bottom: 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
         }
         .sticky-nav {
             position: fixed;
@@ -27,84 +25,195 @@
             transition: all 0.3s ease;
         }
         body.has-sticky-nav {
-            padding-top: 54px;
+            padding-top: 60px;
         }
 
         /* Menu Item Styles */
         .ui.menu .item {
+            color: #ffffff !important;
             transition: all 0.3s ease;
+            font-weight: 500;
         }
         .ui.menu .item:hover {
-            background: rgba(255,255,255,0.15) !important;
+            background: rgba(255,255,255,0.2) !important;
+            color: #ffffff !important;
         }
         .ui.dropdown.item .menu {
-            border-radius: 0.3rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #ffffff;
+        }
+        .ui.dropdown.item .menu .item {
+            color: #1e3c72 !important;
+        }
+        .ui.dropdown.item .menu .item:hover {
+            background: #f0f4f8 !important;
         }
 
         /* Layout Styles */
         .content-section {
-            padding: 2rem 0;
+            padding: 3rem 0;
         }
         #app-content {
-            min-height: calc(100vh - 250px);
-            padding: 2rem 0;
+            min-height: calc(100vh - 300px);
+            padding: 6rem 0;
+            transition: opacity 0.3s ease;
+        }
+        .loading-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
         }
 
         /* Footer Styles */
         .ui.footer {
-            margin-top: 2rem;
-            padding: 2rem 0;
-            background: #f8f9fa;
+            margin-top: 12rem;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-top: 1px solid rgba(0,0,0,0.1);
         }
-    </style>
+        .ui.footer .header {
+            color: #1e3c72;
+        }
 
+        /* Cart Badge */
+        .cart-badge {
+            background: #21ba45;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Product Card Styles */
+        .ui.card.product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .ui.card.product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .ui.card .image img {
+            object-fit: cover;
+            height: 200px;
+        }
+
+        /* Form Styles */
+        .ui.form .field label {
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        .ui.form .field input, .ui.form .field textarea, .ui.form .field select {
+            border-radius: 0.5rem;
+            border: 1px solid #d4d4d5;
+        }
+        .ui.form .field input:focus, .ui.form .field textarea:focus, .ui.form .field select:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 5px rgba(42, 82, 152, 0.2);
+        }
+
+        /* Success/Error Messages */
+        .ui.message {
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .ui.success.message {
+            background: #e6ffed;
+            color: #1a531b;
+        }
+        .ui.error.message {
+            background: #ffe6e6;
+            color: #912d2b;
+        }
+
+        /* Order List Table */
+        .ui.table.order-table {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .ui.table.order-table th {
+            background: #1e3c72;
+            color: white;
+        }
+        .ui.table.order-table tr:hover {
+            background: #f0f4f8;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 767px) {
+            .ui.menu .item {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+            }
+            #app-content {
+                padding: 1.5rem 0;
+            }
+            .ui.footer {
+                padding: 2rem 0;
+            }
+            .cart-badge {
+                padding: 2px 6px;
+                font-size: 0.7rem;
+            }
+            .ui.card.product-card {
+                margin: 0.5rem;
+            }
+        }
+    </style>
 </head>
-<body>
+<body x-data="{ open: false }" x-init="$store.GlobalVariable.init()">
     <!-- Navigation Menu -->
-    <div class="ui inverted menu blue" x-data>
+    <div class="ui inverted menu blue sticky-nav" role="navigation" aria-label="Main navigation">
         <div class="ui container">
-            <!-- Main Navigation -->
-            <a class="header item" @click.prevent="navigateTo('home/welcome')">
-                <i class="home large icon"></i>Home
+            <a class="header item" @click="$store.GlobalFunctions.navigateTo('home/welcome')" aria-label="Home">
+                <i class="home large icon"></i>BTS Store
             </a>
 
             <!-- Products Dropdown -->
-            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open">
+            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open" aria-label="Products menu">
                 <i class="shopping bag icon"></i> Products
+                <span class="cart-badge" x-text="$store.GlobalVariable.cart.totalItems"></span>
                 <i class="dropdown icon"></i>
                 <div class="menu" x-show="open" @click.outside="open = false">
-                    <a class="item" @click.prevent="navigateTo('products/product_display'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('products/product_display'); open = false;">
                         <i class="eye icon"></i> View Products
                     </a>
-                    <a class="item" @click.prevent="navigateTo('products/product_cartdisplay'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('products/product_add'); open = false;">
+                        <i class="plus icon"></i> Add Product
+                    </a>
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('products/product_cartdisplay'); open = false;">
                         <i class="shopping cart icon"></i> Cart
                     </a>
-                    <a class="item" @click.prevent="navigateTo('products/product_orderlist'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('products/product_checkout'); open = false;">
+                        <i class="credit card icon"></i> Checkout
+                    </a>
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('products/product_orderlist'); open = false;">
                         <i class="list icon"></i> Order History
                     </a>
                 </div>
             </div>
 
             <!-- Contacts & Chat Section -->
-            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open">
+            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open" aria-label="Management menu">
                 <i class="users icon"></i> Management
                 <i class="dropdown icon"></i>
                 <div class="menu" x-show="open" @click.outside="open = false">
                     <div class="header">Contacts</div>
-                    <a class="item" @click.prevent="navigateTo('contacts/contact_add'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('contacts/contact_add'); open = false;">
                         <i class="user plus icon"></i> Add Contact
                     </a>
-                    <a class="item" @click.prevent="navigateTo('contacts/contact_all'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('contacts/contact_all'); open = false;">
                         <i class="address book icon"></i> Contact List
                     </a>
                     <div class="divider"></div>
                     <div class="header">Chat</div>
-                    <a class="item" @click.prevent="navigateTo('chats/chat_add'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('chats/chat_add'); open = false;">
                         <i class="edit icon"></i> New Chat
                     </a>
-                    <a class="item" @click.prevent="navigateTo('chats/chat_list'); open = false;">
+                    <a class="item" @click="$store.GlobalFunctions.navigateTo('chats/chat_list'); open = false;">
                         <i class="comments icon"></i> Chat List
                     </a>
                 </div>
@@ -113,27 +222,27 @@
     </div>
 
     <!-- Main Content Container -->
-    <div class="ui container" id="app-content" style="min-height: calc(100vh - 200px); margin-bottom: 0;">
-        <!-- Dynamic content will be loaded here -->
+    <div class="ui container content-section" id="app-content" role="main" x-html="$store.GlobalVariable.content">
+        <div class="loading-indicator">
+            <div class="ui active centered inline loader"></div>
+        </div>
     </div>
 
     <!-- Footer -->
-    <div class="ui footer" style="position: relative; bottom: 0; width: 100%;">
+    <div class="ui footer" role="contentinfo">
         <div class="ui container">
             <div class="ui stackable grid">
                 <div class="eight wide column">
-                    <h4 class="ui header">SAI USA</h4>
-                    <p>© 2025 Sai Usa. All rights reserved.</p>
+                    <h4 class="ui header">SAI USA - BTS Album Store</h4>
+                    <p>© 2025 SAI USA. All rights reserved.</p>
                 </div>
                 <div class="eight wide column right aligned">
                     <div class="ui tiny basic buttons">
-                        <a class="ui button" @click.prevent="navigateTo('about/about')">
-                            <i class="info circle icon"></i>
-                            About Us
+                        <a class="ui button" @click="$store.GlobalFunctions.navigateTo('about/about')" aria-label="About Us">
+                            <i class="info circle icon"></i> About Us
                         </a>
-                        <a class="ui button" @click.prevent="navigateTo('services/service')">
-                            <i class="cogs icon"></i>
-                            Services
+                        <a class="ui button" @click="$store.GlobalFunctions.navigateTo('services/service')" aria-label="Services">
+                            <i class="cogs icon"></i> Services
                         </a>
                     </div>
                 </div>
@@ -142,7 +251,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="config/router.js"></script>
-    <script defer src="script/app.js"></script>
+    <script src="config/router.js" data-keep></script>
+    <script src="script/app.js" data-keep></script>
 </body>
 </html>

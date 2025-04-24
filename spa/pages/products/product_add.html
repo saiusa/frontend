@@ -1,80 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Album</title>
-    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
-    <script src="../../config/localjs/alpine.min.js" defer></script>
-    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
-    <script src="../../config/localui/semantic.min.js"></script>
-</head>
-<body>
-    <div class="ui container" style="margin-top: 1rem;">
-        <button class="ui icon button" @click="navigateTo('products/product_display')">
-            <i class="arrow left icon"></i> Back to Albums
-        </button>
-    </div>
-    <div class="ui container" style="margin-top: 2rem;" x-data="manageAddProduct">
-        <h2 class="ui header">
-            <i class="plus icon"></i>
-            <div class="content">
-                Add New Album
-                <div class="sub header">Create a new album for the store</div>
-            </div>
-        </h2>
-        <div class="ui divider"></div>
+<div x-data="productAdd">
+    <h2 class="ui header">Add New Product</h2>
+    <div class="ui success message" x-show="message" x-text="message"></div>
+    <div class="ui error message" x-show="error" x-text="error"></div>
+    <template x-if="loading">
+        <div class="loading-indicator">
+            <div class="ui active centered inline loader"></div>
+        </div>
+    </template>
+    <form class="ui form" @submit.prevent="addProduct" x-show="!loading">
+        <div class="field">
+            <label>Name</label>
+            <input type="text" x-model="form.name" placeholder="Product name" required>
+        </div>
+        <div class="field">
+            <label>Description</label>
+            <textarea x-model="form.description" placeholder="Product description" required></textarea>
+        </div>
+        <div class="field">
+            <label>Price</label>
+            <input type="number" step="0.01" x-model="form.price" placeholder="Price" required>
+        </div>
+        <div class="field">
+            <label>Stock</label>
+            <input type="number" x-model="form.stock" placeholder="Stock" required>
+        </div>
+        <div class="field">
+            <label>Slug (optional)</label>
+            <input type="text" x-model="form.slug" placeholder="Product slug">
+        </div>
+        <div class="field">
+            <label>Active</label>
+            <select x-model="form.is_active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Image (optional)</label>
+            <input type="file" accept="image/*" @change="form.image = $event.target.files[0]">
+        </div>
+        <button class="ui primary button" type="submit">Add Product</button>
+    </form>
+</div>
 
-        <form class="ui form" @submit.prevent="addProduct">
-            <div class="field">
-                <label>Name</label>
-                <input type="text" placeholder="Album Name" x-model="product.name">
-            </div>
-            <div class="field">
-                <label>Description</label>
-                <textarea placeholder="Album Description" x-model="product.description"></textarea>
-            </div>
-            <div class="field">
-                <label>Price</label>
-                <input type="number" step="0.01" min="0" placeholder="Price" x-model.number="product.price">
-            </div>
-            <div class="field">
-                <label>Stock</label>
-                <input type="number" min="0" placeholder="Stock Quantity" x-model.number="product.stock">
-            </div>
-            <div class="field">
-                <label>Image URL</label>
-                <input type="url" placeholder="Image URL" x-model="product.image">
-            </div>
-            <button class="ui primary button" type="submit">Add Album</button>
-        </form>
-    </div>
-
-    <script>
-        Alpine.data("manageAddProduct", () => ({
-            product: {
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('productAdd', () => ({
+            form: {
                 name: '',
                 description: '',
-                price: 0,
-                stock: 0,
-                image: ''
+                price: '',
+                stock: '',
+                slug: '',
+                is_active: true,
+                image: null
             },
-            
+            message: '',
+            error: '',
+            loading: false,
+
             async addProduct() {
-                if (!this.product.name || !this.product.description || !this.product.price || !this.product.stock) {
-                    alert('Please fill out all required fields.');
-                    return;
-                }
+                this.loading = true;
                 try {
-                    await Alpine.store("GlobalFunctions").addProduct(this.product);
-                    alert('Album added successfully!');
-                    this.product = { name: '', description: '', price: 0, stock: 0, image: '' };
-                    navigateTo('products/product_display');
+                    const formData = new FormData();
+                    formData.append('name', this.form.name);
+                    formData.append('description', this.form.description);
+                    formData.append('price', this.form.price);
+                    formData.append('stock', this.form.stock);
+                    formData.append('slug', this.form.slug);
+                    formData.append('is_active', this.form.is_active);
+                    if (this.form.image) {
+                        formData.append('image', this.form.image);
+                    }
+
+                    const response = await fetch(`${Alpine.store('settings').apiBaseUrl}/products/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': Alpine.store('GlobalVariable').csrfToken  // Include CSRF token
+                        },
+                        credentials: 'include',  // Include cookies
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || 'Failed to add product');
+                    }
+                    this.form = { name: '', description: '', price: '', stock: '', slug: '', is_active: true, image: null };
+                    this.message = 'Product added successfully!';
+                    await Alpine.data('productDisplay')?.init();
                 } catch (error) {
-                    alert('Failed to add album. Please try again.');
+                    this.error = error.message;
+                } finally {
+                    this.loading = false;
                 }
             }
         }));
-    </script>
-</body>
-</html>
+    });
+</script>

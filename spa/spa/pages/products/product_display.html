@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Display</title>
+    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
+    <script src="../../config/localjs/alpine.min.js" defer></script>
+    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
+    <script src="../../config/localui/semantic.min.js"></script>
+    <script src="../../app.js"></script>
+    <style>
+        .ui.button:hover {
+            background-color: #2185d0 !important;
+            color: white !important;
+        }
+        .stock-badge {
+            padding: 0.5em;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .stock-badge.in-stock {
+            background-color: #21ba45;
+            color: white;
+        }
+        .stock-badge.out-of-stock {
+            background-color: #db2828;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui container" style="margin-top: 2rem;" x-data="productList">
+        <div class="ui stackable grid">
+            <div class="eight wide column">
+                <h2 class="ui header">
+                    <i class="shopping bag icon"></i>
+                    <div class="content">
+                        Albums
+                        <div class="sub header">Browse our collection of albums</div>
+                    </div>
+                </h2>
+            </div>
+            <div class="eight wide column right aligned">
+                <h4 style="display: inline-block; margin-right: 1rem;">Cart: <span x-text="cart.total"></span> items</h4>
+                <button class="ui primary button" @click="navigateTo('products/product_add')">
+                    <i class="plus icon"></i> Add Product
+                </button>
+                <button class="ui primary button" @click="navigateTo('products/product_cartdisplay')">
+                    <i class="shopping cart icon"></i> View Cart
+                </button>
+            </div>
+        </div>
+        <div class="ui divider"></div>
+
+        <div x-show="message" :class="`ui ${messageType} message`">
+            <p x-text="message"></p>
+        </div>
+
+        <div class="ui fluid icon input" style="margin-bottom: 2rem;">
+            <input type="text" placeholder="Search albums..." x-model="searchQuery" @input="filterProducts">
+            <i class="search icon"></i>
+        </div>
+
+        <div x-show="loading" class="ui active centered inline loader"></div>
+        <div x-show="!loading" class="ui stackable three column grid">
+            <template x-for="product in paginatedData" :key="product.id">
+                <div class="column">
+                    <div class="ui fluid card">
+                        <div class="image">
+                            <img :src="product.image || '../../product_image/album/placeholder.jpg'" :alt="product.name || 'Album Image'">
+                        </div>
+                        <div class="content">
+                            <a class="header" x-text="product.name || 'Unnamed Album'"></a>
+                            <div class="meta">
+                                <span class="price" x-text="'$' + (product.price || 0).toFixed(2)"></span>
+                            </div>
+                            <div class="description">
+                                <span :class="product.stock > 0 ? 'stock-badge in-stock' : 'stock-badge out-of-stock'" 
+                                      x-text="product.stock > 0 ? 'In Stock (' + product.stock + ')' : 'Out of Stock (0)'"></span>
+                            </div>
+                        </div>
+                        <div class="extra content">
+                            <button class="ui green button" :disabled="product.stock === 0" @click="addToCart(product)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="!loading && totalPages > 1" class="ui centered grid" style="margin-top: 2rem;">
+            <div class="row">
+                <div class="ui pagination menu">
+                    <a class="item" @click="prevPage" :class="{ disabled: currentPage === 1 }">Previous</a>
+                    <template x-for="page in totalPages" :key="page">
+                        <a class="item" @click="currentPage = page" :class="{ active: currentPage === page }" x-text="page"></a>
+                    </template>
+                    <a class="item" @click="nextPage" :class="{ disabled: currentPage === totalPages }">Next</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Alpine.data("productList", () => ({
+            products: Alpine.reactive({ data: [] }),
+            cart: Alpine.store("GlobalVariable")?.cart || { total: 0 },
+            searchQuery: '',
+            message: 'Loading products...',
+            messageType: '',
+            loading: true,
+            pageSize: 9, // 3x3 grid
+            currentPage: 1,
+
+            fetchAllProducts() {
+                return new Promise((resolve, reject) => {
+                    Alpine.store("GlobalFunctions")?.fetchProducts()
+                        .then(data => {
+                            this.products.data = [...data];
+                            this.message = '';
+                            this.loading = false;
+                            resolve(data);
+                        })
+                        .catch(() => {
+                            this.message = 'Failed to load products';
+                            this.messageType = 'red';
+                            this.loading = false;
+                            reject('Failed to load products');
+                        });
+                });
+            },
+
+            filterProducts() {
+                if (Alpine.store("GlobalFunctions")?.filterProducts) {
+                    this.products.data = Alpine.store("GlobalFunctions").filterProducts(this.searchQuery);
+                    this.currentPage = 1;
+                }
+            },
+
+            async addToCart(product) {
+                try {
+                    await Alpine.store("GlobalFunctions")?.addToCart(product);
+                    this.message = `Added ${product.name} to cart!`;
+                    this.messageType = 'green';
+                    setTimeout(() => { this.message = ''; }, 3000);
+                } catch (error) {
+                    this.message = `Failed to add to cart: ${error.message || 'Please try again.'}`;
+                    this.messageType = 'red';
+                }
+            },
+
+            get totalPages() {
+                return Math.ceil(this.products.data.length / this.pageSize);
+            },
+
+            get paginatedData() {
+                let start = (this.currentPage - 1) * this.pageSize;
+                return this.products.data.slice(start, start + this.pageSize);
+            },
+
+            nextPage() {
+                if (this.currentPage < this.totalPages) this.currentPage++;
+            },
+
+            prevPage() {
+                if (this.currentPage > 1) this.currentPage--;
+            },
+
+            navigateTo(page) {
+                window.location.href = `../${page}.html`;
+            },
+
+            init() {
+                this.fetchAllProducts();
+            }
+        }));
+    </script>
+</body>
+</html>

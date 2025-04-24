@@ -1,122 +1,130 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout</title>
-    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
-    <script src="../../config/localjs/alpine.min.js" defer></script>
-    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
-    <script src="../../config/localui/semantic.min.js"></script>
-</head>
-<body>
-    <div class="ui container" style="margin-top: 1rem;">
-        <button class="ui icon button" @click="navigateTo('products/product_cartdisplay')">
-            <i class="arrow left icon"></i> Back to Cart
-        </button>
-    </div>
-    <div class="ui container" style="margin-top: 2rem;" x-data="manageCheckout">
-        <h2 class="ui header">
-            <i class="credit card icon"></i>
-            <div class="content">
-                Checkout
-                <div class="sub header">Complete your album purchase</div>
+<div x-data="productCheckout">
+    <h2 class="ui header">Checkout</h2>
+    <div class="ui success message" x-show="message" x-text="message"></div>
+    <div class="ui error message" x-show="error" x-text="error"></div>
+    <template x-if="loading">
+        <div class="loading-indicator">
+            <div class="ui active centered inline loader"></div>
+        </div>
+    </template>
+    <div x-show="!loading">
+        <div x-show="form.cart_id">
+            <h3 class="ui header">Cart Items</h3>
+            <table class="ui celled table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="item in selectedCartItems" :key="item.product_id">
+                        <tr>
+                            <td x-text="item.product_name"></td>
+                            <td x-text="item.quantity"></td>
+                            <td>$<span x-text="item.price_at_purchase"></span></td>
+                            <td>$<span x-text="item.subtotal"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </h2>
-        <div class="ui divider"></div>
-
-        <form class="ui form" @submit.prevent="confirmOrder">
-            <h4 class="ui dividing header">Billing Information</h4>
-            <div class="field">
-                <label>Name</label>
-                <input type="text" placeholder="Full Name" x-model="billingInfo.name">
-            </div>
-            <div class="field">
-                <label>Email</label>
-                <input type="email" placeholder="Email Address" x-model="billingInfo.email">
-            </div>
-            <div class="field">
-                <label>Address</label>
-                <input type="text" placeholder="Shipping Address" x-model="billingInfo.address">
-            </div>
-            <div class="field">
-                <label>Payment Method</label>
-                <select class="ui dropdown" x-model="billingInfo.payment_method">
-                    <option value="" disabled selected>Select a payment method</option>
-                    <option value="COD">Cash on Delivery</option>
-                    <option value="CARD">Credit/Debit Card</option>
-                    <option value="PAYPAL">PayPal</option>
-                </select>
-            </div>
-
-            <h4 class="ui dividing header">Order Summary</h4>
-            <div class="ui divided items">
-                <template x-for="item in $store.GlobalVariable.cart.data" :key="item.id">
-                    <div class="item">
-                        <div class="content">
-                            <a class="header" x-text="item.name"></a>
-                            <div class="meta">
-                                <span class="price" x-text="'$' + (item.price * item.quantity).toFixed(2)"></span>
-                                <span class="quantity" x-text="'Qty: ' + item.quantity"></span>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
-
-            <button class="ui primary button" type="submit" :disabled="!$store.GlobalVariable.cart.data.length">Confirm Order</button>
-        </form>
+            <form class="ui form" @submit.prevent="submitCheckout">
+                <div class="field">
+                    <label>Cart ID</label>
+                    <select x-model="form.cart_id" required @change="updateSelectedCart">
+                        <option value="">Select a Cart</option>
+                        <template x-for="cart in $store.GlobalVariable.carts" :key="cart.id">
+                            <option :value="cart.id" x-text="`Cart #${cart.id} ($${cart.subtotal})`"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Customer Name</label>
+                    <input type="text" x-model="form.customer_name" placeholder="Customer name" required>
+                </div>
+                <div class="field">
+                    <label>Email</label>
+                    <input type="email" x-model="form.customer_email" placeholder="Email" required>
+                </div>
+                <div class="field">
+                    <label>Address</label>
+                    <textarea x-model="form.customer_address" placeholder="Address" required></textarea>
+                </div>
+                <div class="field">
+                    <label>Phone Number</label>
+                    <input type="tel" x-model="form.phone_number" placeholder="Phone number">
+                </div>
+                <div class="field">
+                    <label>Payment Method</label>
+                    <select x-model="form.payment_method" required>
+                        <option value="COD">Cash on Delivery</option>
+                        <option value="CARD">Credit/Debit Card</option>
+                        <option value="PAYPAL">PayPal</option>
+                    </select>
+                </div>
+                <button class="ui primary button" type="submit">Submit Checkout</button>
+            </form>
+        </div>
     </div>
 
     <script>
-        Alpine.data("manageCheckout", () => ({
-            billingInfo: {
-                name: '',
-                email: '',
-                address: '',
-                payment_method: ''
-            },
-            get totalPrice() {
-                return $store.GlobalVariable.cart.data.reduce((sum, product) => sum + product.price * product.quantity, 0);
-            },
-            init() {
-                $('.ui.dropdown').dropdown();
-            },
-            async confirmOrder() {
-                if (!this.billingInfo.name || !this.billingInfo.email || !this.billingInfo.address || !this.billingInfo.payment_method) {
-                    alert('Please fill out all fields.');
-                    return;
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('productCheckout', () => ({
+                form: {
+                    cart_id: '',
+                    customer_name: '',
+                    customer_email: '',
+                    customer_address: '',
+                    phone_number: '',
+                    payment_method: 'COD'
+                },
+                selectedCartItems: [],
+                message: '',
+                error: '',
+                loading: false,
+    
+                async init() {
+                    this.loading = true;
+                    await Alpine.store('GlobalVariable').fetchCart();
+                    this.loading = false;
+                },
+    
+                updateSelectedCart() {
+                    const selectedCart = $store.GlobalVariable.carts.find(cart => cart.id == this.form.cart_id);
+                    this.selectedCartItems = selectedCart ? selectedCart.items : [];
+                },
+    
+                async submitCheckout() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(`${Alpine.store('settings').apiBaseUrl}/products/checkouts/`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': Alpine.store('GlobalVariable').csrfToken  // Include CSRF token
+                            },
+                            credentials: 'include',  // Include cookies
+                            body: JSON.stringify(this.form)
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to submit checkout');
+                        }
+                        this.form = { cart_id: '', customer_name: '', customer_email: '', customer_address: '', phone_number: '', payment_method: 'COD' };
+                        this.selectedCartItems = [];
+                        this.message = 'Checkout submitted successfully!';
+                        await Alpine.store('GlobalVariable').fetchCart();
+                        await Alpine.data('productOrderList')?.init();
+                        setTimeout(() => this.message = '', 3000);
+                    } catch (error) {
+                        this.error = error.message;
+                        setTimeout(() => this.error = '', 3000);
+                    } finally {
+                        this.loading = false;
+                    }
                 }
-                if (!$store.GlobalVariable.cart.data.length) {
-                    alert('Cart is empty.');
-                    return;
-                }
-                const checkoutData = {
-                    cart_id: $store.GlobalVariable.cart.cart_id,
-                    customer_name: this.billingInfo.name,
-                    customer_email: this.billingInfo.email,
-                    customer_address: this.billingInfo.address,
-                    payment_method: this.billingInfo.payment_method,
-                    total_price: this.totalPrice
-                };
-                console.log('Sending checkout data:', checkoutData);
-                try {
-                    const response = await Alpine.store("GlobalFunctions").confirmCheckout(checkoutData);
-                    console.log('Checkout response:', response);
-                    alert(`Order confirmed!\n\nName: ${this.billingInfo.name}\nEmail: ${this.billingInfo.email}\nAddress: ${this.billingInfo.address}\nPayment Method: ${this.billingInfo.payment_method}\nTotal: $${this.totalPrice.toFixed(2)}`);
-                    navigateTo('products/product_orderlist');
-                } catch (error) {
-                    console.error('Failed to confirm checkout:', error);
-                    alert(`Failed to confirm order: ${error.message || 'Please try again.'}`);
-                }
-            },
-
-            init() {
-            this.fetchAllCheckoutData(); // Fetch data when the component initializes
-        }
-
-        }));
+            }));
+        });
     </script>
-</body>
-</html>

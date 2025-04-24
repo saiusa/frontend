@@ -1,66 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cart Display</title>
-    <link rel="stylesheet" href="../../config/localui/semantic.min.css">
-    <script src="../../config/localjs/alpine.min.js" defer></script>
-    <script src="../../config/localjs/jquery-3.6.0.min.js"></script>
-    <script src="../../config/localui/semantic.min.js"></script>
-</head>
-<body>
-    <div class="ui container" style="margin-top: 1rem;">
-        <button class="ui icon button" @click="navigateTo('products/product_display')">
-            <i class="arrow left icon"></i> Back to Albums
-        </button>
-    </div>
-
-    <div class="ui container" style="margin-top: 2rem;" x-data="manageCart">
-        <h2 class="ui header">
-            <i class="shopping cart icon"></i>
-            <div class="content">
-                Your Cart
-                <div class="sub header">Review your selected albums</div>
-            </div>
-        </h2>
-        <div class="ui divider"></div>
-
-        <div class="ui divided items">
-            <template x-for="item in $store.GlobalVariable.cart.data" :key="item.id">
-                <div class="item">
-                    <div class="image">
-                        <img :src="item.image" :alt="item.name">
-                    </div>
-                    <div class="content">
-                        <a class="header" x-text="item.name"></a>
-                        <div class="meta">
-                            <span class="price" x-text="'$' + item.price.toFixed(2)"></span>
-                        </div>
-                        <div class="description">
-                            <div class="ui input">
-                                <input type="number" min="1" x-model.number="item.quantity" @change="$store.GlobalFunctions.updateCartItem(item)">
-                            </div>
-                        </div>
-                        <div class="extra">
-                            <button class="ui red button" @click="$store.GlobalFunctions.removeFromCart(item)">Remove</button>
-                        </div>
+<div x-data="productCart">
+    <h2 class="ui header">Shopping Cart</h2>
+    <div class="ui success message" x-show="message" x-text="message"></div>
+    <div class="ui error message" x-show="error" x-text="error"></div>
+    <template x-if="loading">
+        <div class="loading-indicator">
+            <div class="ui active centered inline loader"></div>
+        </div>
+    </template>
+    <div class="ui divided items" x-show="!loading">
+        <template x-for="cart in carts" :key="cart.id">
+            <div class="item">
+                <div class="content">
+                    <div class="header">Cart #<span x-text="cart.id"></span></div>
+                    <div class="description">
+                        <table class="ui celled table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="item in cart.items" :key="item.product_id">
+                                    <tr>
+                                        <td x-text="item.product_name"></td>
+                                        <td>
+                                            <input type="number" min="1" x-model.number="item.quantity" @change="updateCartItem(cart.id, item.product_id, item.quantity)">
+                                        </td>
+                                        <td>$<span x-text="item.price_at_purchase"></span></td>
+                                        <td>$<span x-text="item.subtotal"></span></td>
+                                        <td>
+                                            <button class="ui red button" @click="deleteCartItem(cart.id, item.product_id)">Remove</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <p>Total: $<span x-text="cart.subtotal"></span></p>
                     </div>
                 </div>
-            </template>
-        </div>
-
-        <div class="ui divider"></div>
-        <h3>Total: <span x-text="'$' + totalPrice.toFixed(2)"></span></h3>
-        <button class="ui primary button" @click="navigateTo('products/product_checkout')" :disabled="!$store.GlobalVariable.cart.data.length">Proceed to Checkout</button>
+            </div>
+        </template>
     </div>
+    <button class="ui primary button" @click="navigateTo('products/product_checkout')" x-show="carts.length">Proceed to Checkout</button>
+</div>
 
-    <script>
-        Alpine.data("manageCart", () => ({
-            get totalPrice() {
-                return $store.GlobalVariable.cart.data.reduce((total, item) => total + item.price * item.quantity, 0);
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('productCart', () => ({
+            carts: Alpine.store('GlobalVariable').carts,
+            message: '',
+            error: '',
+            loading: false,
+
+            async init() {
+                this.loading = true;
+                await Alpine.store('GlobalVariable').fetchCart();
+                this.carts = Alpine.store('GlobalVariable').carts;
+                this.loading = false;
+            },
+
+            async updateCartItem(cartId, productId, quantity) {
+                this.loading = true;
+                try {
+                    const response = await fetch(`${Alpine.store('settings').apiBaseUrl}/carts/${cartId}/items/${productId}/`, {
+                        method: 'PATCH',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': Alpine.store('GlobalVariable').csrfToken  // Include CSRF token
+                        },
+                        credentials: 'include',  // Include cookies
+                        body: JSON.stringify({ quantity })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to update cart item');
+                    }
+                    await Alpine.store('GlobalVariable').fetchCart();
+                    this.carts = Alpine.store('GlobalVariable').carts;
+                    this.message = 'Cart updated successfully!';
+                    setTimeout(() => this.message = '', 3000);
+                } catch (error) {
+                    this.error = error.message;
+                    setTimeout(() => this.error = '', 3000);
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            async deleteCartItem(cartId, productId) {
+                this.loading = true;
+                try {
+                    const response = await fetch(`${Alpine.store('settings').apiBaseUrl}/carts/${cartId}/items/${productId}/`, {
+                        method: 'DELETE',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': Alpine.store('GlobalVariable').csrfToken  // Include CSRF token
+                        },
+                        credentials: 'include'  // Include cookies
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to delete cart item');
+                    }
+                    await Alpine.store('GlobalVariable').fetchCart();
+                    this.carts = Alpine.store('GlobalVariable').carts;
+                    this.message = 'Item removed from cart!';
+                    setTimeout(() => this.message = '', 3000);
+                } catch (error) {
+                    this.error = error.message;
+                    setTimeout(() => this.error = '', 3000);
+                } finally {
+                    this.loading = false;
+                }
             }
         }));
-    </script>
-</body>
-</html>
+    });
+</script>

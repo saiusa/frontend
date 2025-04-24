@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USA</title>
+   
+    <!-- External Dependencies -->
+    <script defer src="config/localjs/alpine.min.js"></script>
+    <link rel="stylesheet" href="config/localui/semantic.min.css">
+    <script src="config/localjs/jquery-3.6.0.min.js"></script>
+    <script src="config/localui/semantic.min.js"></script>
+
+    <style>
+        /* Navigation Styles */
+        .ui.menu {
+            border-radius: 0 !important;
+            margin-bottom: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .sticky-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        body.has-sticky-nav {
+            padding-top: 54px;
+        }
+
+        /* Menu Item Styles */
+        .ui.menu .item {
+            transition: all 0.3s ease;
+        }
+        .ui.menu .item:hover {
+            background: rgba(255,255,255,0.15) !important;
+        }
+        .ui.dropdown.item .menu {
+            border-radius: 0.3rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Layout Styles */
+        .content-section {
+            padding: 2rem 0;
+        }
+        #app-content {
+            min-height: calc(100vh - 250px);
+            padding: 2rem 0;
+        }
+
+        /* Footer Styles */
+        .ui.footer {
+            margin-top: 2rem;
+            padding: 2rem 0;
+            background: #f8f9fa;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+
+</head>
+<body>
+    <!-- Navigation Menu -->
+    <div class="ui inverted menu blue" x-data>
+        <div class="ui container">
+            <!-- Main Navigation -->
+            <a class="header item" @click.prevent="navigateTo('home/welcome')">
+                <i class="home large icon"></i>Home
+            </a>
+
+            <!-- Products Dropdown -->
+            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open">
+                <i class="shopping bag icon"></i> Products
+                <i class="dropdown icon"></i>
+                <div class="menu" x-show="open" @click.outside="open = false">
+                    <a class="item" @click.prevent="navigateTo('products/product_display'); open = false;">
+                        <i class="eye icon"></i> View Products
+                    </a>
+                    <a class="item" @click.prevent="navigateTo('products/product_cartdisplay'); open = false;">
+                        <i class="shopping cart icon"></i> Cart
+                    </a>
+                    <a class="item" @click.prevent="navigateTo('products/product_orderlist'); open = false;">
+                        <i class="list icon"></i> Order History
+                    </a>
+                </div>
+            </div>
+
+            <!-- Contacts & Chat Section -->
+            <div class="ui dropdown item" x-data="{ open: false }" @click="open = !open">
+                <i class="users icon"></i> Management
+                <i class="dropdown icon"></i>
+                <div class="menu" x-show="open" @click.outside="open = false">
+                    <div class="header">Contacts</div>
+                    <a class="item" @click.prevent="navigateTo('contacts/contact_add'); open = false;">
+                        <i class="user plus icon"></i> Add Contact
+                    </a>
+                    <a class="item" @click.prevent="navigateTo('contacts/contact_all'); open = false;">
+                        <i class="address book icon"></i> Contact List
+                    </a>
+                    <div class="divider"></div>
+                    <div class="header">Chat</div>
+                    <a class="item" @click.prevent="navigateTo('chats/chat_add'); open = false;">
+                        <i class="edit icon"></i> New Chat
+                    </a>
+                    <a class="item" @click.prevent="navigateTo('chats/chat_list'); open = false;">
+                        <i class="comments icon"></i> Chat List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="ui container" id="app-content" style="min-height: calc(100vh - 200px); margin-bottom: 0;">
+        <!-- Dynamic content will be loaded here -->
+    </div>
+
+    <!-- Footer -->
+    <div class="ui footer" style="position: relative; bottom: 0; width: 100%;">
+        <div class="ui container">
+            <div class="ui stackable grid">
+                <div class="eight wide column">
+                    <h4 class="ui header">SAI USA</h4>
+                    <p>© 2025 Sai Usa. All rights reserved.</p>
+                </div>
+                <div class="eight wide column right aligned">
+                    <div class="ui tiny basic buttons">
+                        <a class="ui button" @click.prevent="navigateTo('about/about')">
+                            <i class="info circle icon"></i>
+                            About Us
+                        </a>
+                        <a class="ui button" @click.prevent="navigateTo('services/service')">
+                            <i class="cogs icon"></i>
+                            Services
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config/router.js"></script>
+    <script defer src="script/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<div class="ui container" style="margin-top: 20px;">
+    <div class="ui raised segment" x-data="chatList">
+        <!-- Header Section -->
+        <h2 class="ui header">
+            <i class="comments blue icon"></i>
+            <div class="content">
+                Chat Messages
+                <div class="sub header">View all chat messages</div>
+            </div>
+        </h2>
+        
+        <!-- Message Display -->
+        <div class="ui message" :class="messageType" x-show="message.length > 0">
+            <i class="close icon" @click="message = ''"></i>
+            <div x-text="message"></div>
+        </div>
+        
+        <!-- Loading State -->
+        <div class="ui active dimmer" x-show="loading">
+            <div class="ui text loader">Loading Messages...</div>
+        </div>
+        
+        <!-- Actions Bar -->
+        <div class="ui grid" style="margin-bottom: 1em;">
+            <div class="eight wide column">
+                <div class="ui icon input">
+                    <input type="text" placeholder="Search messages...">
+                    <i class="search icon"></i>
+                </div>
+            </div>
+            <div class="eight wide column right aligned">
+                <button class="ui primary button" onclick="navigateTo('chats/chat_add')">
+                    <i class="plus icon"></i> New Message
+                </button>
+            </div>
+        </div>
+        
+        <!-- Chat Messages Table -->
+        <table class="ui padded celled striped table">
+            <thead>
+                <tr>
+                    <th class="three wide">Username</th>
+                    <th class="nine wide">Message</th>
+                    <th class="four wide">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="(chat, index) in chats.data" :key="index">
+                    <tr>
+                        <td>
+                            <div class="ui items">
+                                <div class="item">
+                                    <i class="user circle icon"></i>
+                                    <div class="content">
+                                        <span x-text="chat.username || 'Unknown'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="ui message" style="margin: 0;">
+                                <p x-text="chat.chat_message || chat.message || ''"></p>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="ui label">
+                                <i class="clock icon"></i>
+                                <span x-text="formatDate(chat.date)"></span>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+                <tr x-show="!loading && (!chats.data || chats.data.length === 0)">
+                    <td colspan="3" class="center aligned">
+                        <div class="ui placeholder segment">
+                            <div class="ui icon header">
+                                <i class="chat icon"></i>
+                                No chat messages found
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3">
+                        <div class="ui grid">
+                            <div class="eight wide column">
+                                <div class="ui mini statistic">
+                                    <div class="value" x-text="chats.data.length"></div>
+                                    <div class="label">Total Messages</div>
+                                </div>
+                            </div>
+                            <div class="eight wide column right aligned">
+                                <div class="ui pagination mini menu">
+                                    <a class="item" :class="{ disabled: currentPage === 1 }" @click="prevPage">
+                                        <i class="angle left icon"></i>
+                                    </a>
+                                    <a class="item">
+                                        Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>
+                                    </a>
+                                    <a class="item" :class="{ disabled: currentPage === totalPages }" @click="nextPage">
+                                        <i class="angle right icon"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<script>
+    Alpine.data("chatList", () => ({
+        chats: { data: [] },
+        message: "",
+        messageType: "",
+        loading: true,
+        pageSize: 10,
+        currentPage: 1,
+        
+        init() {
+            this.fetchChats();
+        },
+        
+        fetchChats() {
+            this.loading = true;
+            this.message = "";
+            
+            fetch(`${Alpine.store("settings").apiBaseUrl}/exam/chat/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Chat data received:", data);
+                    
+                    // Store the data properly
+                    this.chats = { data: Array.isArray(data) ? data : [] };
+                    
+                    // Update the global store
+                    if (Array.isArray(data)) {
+                        Alpine.store("GlobalVariable").chats.data = data;
+                        Alpine.store("GlobalVariable").chats.total = data.length;
+                    }
+                    
+                    this.message = this.chats.data.length > 0 ? "" : "No chat messages found";
+                    this.loading = false;
+                })
+                .catch(error => {
+                    console.error("Error fetching chats:", error);
+                    this.loading = false;
+                });
+        },
+        
+        get displayedChats() {
+            if (!this.chats || !this.chats.data) return [];
+            const start = (this.currentPage - 1) * this.pageSize;
+            const end = start + this.pageSize;
+            return this.chats.data.slice(start, end);
+        },
+        
+        get totalPages() {
+            return Math.ceil(this.chats.data.length / this.pageSize);
+        },
+        
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+            }
+        },
+        
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+            }
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return "";
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+    }));
+</script>

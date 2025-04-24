@@ -1,0 +1,170 @@
+<div class="ui container" style="margin-top: 20px;">
+
+    <div class="ui segment" x-data="addContact">
+
+        <!-- Display Loading Message -->
+        <div class="ui message" x-show="message" :class="messageType">
+            <p x-text="message"></p>
+        </div>
+
+        <h2 class="ui dividing header">Add New Contact</h2>
+
+        <form class="ui form">
+            <div class="two fields">
+                <div class="field" :class="{ error: errors.first_name }">
+                    <label>First Name</label>
+                    <input type="text" x-model="contact.data.first_name" placeholder="Enter first name" required>
+                    <div class="ui pointing red basic label" x-show="errors.first_name" x-text="errors.first_name"></div>
+                </div>
+                <div class="field" :class="{ error: errors.last_name }">
+                    <label>Last Name</label>
+                    <input type="text" x-model="contact.data.last_name" placeholder="Enter last name" required>
+                    <div class="ui pointing red basic label" x-show="errors.last_name" x-text="errors.last_name"></div>
+                </div>
+            </div>
+
+            <div class="field" :class="{ error: errors.email }">
+                <label>Email</label>
+                <input type="email" x-model="contact.data.email" placeholder="Enter email address" required>
+                <div class="ui pointing red basic label" x-show="errors.email" x-text="errors.email"></div>
+            </div>
+
+            <div class="two fields" :class="{ error: errors.phone_number } ">
+                <div class="field">
+                    <label>Phone Number</label>
+                    <input type="text" x-model="contact.data.phone_number" placeholder="Enter phone number" required>
+                    <div class="ui pointing red basic label" x-show="errors.phone_number" x-text="errors.phone_number"></div>
+                </div>
+                <div class="field" :class="{ error: errors.address }">
+                    <label>Address</label>
+                    <input type="text" x-model="contact.data.address" placeholder="Enter address" required>
+                    <div class="ui pointing red basic label" x-show="errors.address" x-text="errors.address"></div>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+
+            <button class="ui primary button" @click.prevent="saveContact" :class="{ loading: submitting }">
+                <i class="save icon"></i> Save Contact
+            </button>
+            <button type="reset" class="ui button" @click="resetForm">
+                <i class="redo icon"></i> Reset
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- when using x-model, it should typically be an object (or a property inside an object), 
+     especially when binding to form inputs. -->
+    
+
+<script>
+
+        
+    Alpine.data("addContact", () => ({
+        contact: {
+            data: {
+                first_name: "",
+                last_name: "",
+                email: "",
+                phone_number: "",
+                address: ""
+            }
+        },
+        errors: {
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone_number: "",
+            address: ""
+        },
+        message: "",
+        messageType: "",
+        submitting: false,
+
+        saveContact() {
+            // Reset errors
+            this.errors = {
+                first_name: "",
+                last_name: "",
+                email: "",
+                phone_number: "",
+                address: ""
+            };
+
+            // Validate form
+            let isValid = true;
+
+            // Validate each field
+            if (!this.contact.data.first_name.trim()) {
+                this.errors.first_name = "First name is required";
+                isValid = false;
+            }
+
+            if (!this.contact.data.last_name.trim()) {
+                this.errors.last_name = "Last name is required";
+                isValid = false;
+            }
+
+            if (!this.contact.data.email.trim()) {
+                this.errors.email = "Email is required";
+                isValid = false;
+            }
+
+            if (!this.contact.data.phone_number.trim()) {
+                this.errors.phone_number = "Phone number is required";
+                isValid = false;
+            }
+
+            if (!this.contact.data.address.trim()) {
+                this.errors.address = "Address is required";
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            this.submitting = true;
+
+            fetch(`${Alpine.store("settings").apiBaseUrl}/contact/`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(this.contact.data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to add contact");
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.message = "Contact added successfully!";
+                this.messageType = "green";
+                this.resetForm();
+            })
+            .catch(error => {
+                this.message = "Error occurred while adding contact.";
+                this.messageType = "red";
+            })
+            .finally(() => {
+                this.submitting = false;
+            });
+        },
+
+        resetForm() {
+            this.contact.data = {
+                first_name: "",
+                last_name: "",
+                email: "",
+                phone_number: "",
+                address: ""
+            };
+            this.errors = {
+                first_name: "",
+                last_name: "",
+                email: "",
+                phone_number: "",
+                address: ""
+            };
+        }
+    }));
+</script>

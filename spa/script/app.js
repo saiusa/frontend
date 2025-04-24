@@ -1,193 +1,172 @@
-Alpine.store("settings", {
-    apiBaseUrl: "http://172.17.100.14:3329/usa2/api",  
-    appName: "contact application",  
-});
+document.addEventListener("alpine:init", () => {
+// Alpine.store("settings", {
+//     apiBaseUrl: "http://172.17.100.14:3329/usa2/api",
+//     appName: "contact application",
+// });
 
-// Automatically fetch products when the page is loaded
-document.addEventListener("DOMContentLoaded", () => {
-    Alpine.store("GlobalFunctions").fetchProducts();
-});
-Alpine.store("settings", {
-    apiBaseUrl: "http://localhost:2004/api/products",  // Updated API base URL
-    appName: "bts album ecommerce",
-});
 
-Alpine.store("GlobalVariable", {
-    contacts: Alpine.reactive({ data: [], total: 0 }),
-    queryParams: Alpine.reactive({}),
-    products: Alpine.reactive({ data: [], total: 0 }),
-    queryParamsProducts: Alpine.reactive({}),
-    cart: Alpine.reactive({ data: [], total: 0, cart_id: null }),
-    orders: Alpine.reactive({ data: [], total: 0 }),
-});
+    Alpine.store("settings", {
+        apiBaseUrl: "http://127.0.0.1:8017/api/products",  // Update to match backend port
+        appName: "bts album products",
+    });
 
-Alpine.store("GlobalFunctions", { 
-    findContactById(id) {        
-        let contacts = Alpine.store("GlobalVariable").contacts.data;
-        let foundContact = contacts.find(c => Number(c.id) === Number(id));
-        return foundContact ? { ...foundContact } : {};
-    },
+    Alpine.store("GlobalVariable", {
+        contacts: Alpine.reactive({ data: [], total: 0 }),
+        errorMessage: '',
+        queryParams: Alpine.reactive({}),
+        content: '',
+        loading: false,
+        carts: [],
+        cart: {
+            totalItems: 0
+        },
+        csrfToken: '',
 
-    async fetchProducts() {
+        async init() {
+            await this.fetchCsrfToken();
+            await this.fetchCart();
+            await this.loadContent('products/product_display');
+        },
+
+        async fetchCsrfToken() {
         try {
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/products/`);
-            if (!response.ok) throw new Error('Failed to fetch products');
-            const data = await response.json();
-            Alpine.store("GlobalVariable").products.data = data;
-            Alpine.store("GlobalVariable").products.total = data.length;
-        } catch (error) {
-            console.error("Error fetching products:", error);
-        }
-    },
-
-    filterProducts(query) {
-        return Alpine.store("GlobalVariable").products.data.filter(product => 
-            product.name.toLowerCase().includes(query.toLowerCase())
-        );
-    },
-
-    async addProduct(productData) {
-        try {
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/products/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productData),
+            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/products/get-csrf-token/`, {
+                method: 'GET',
+                credentials: 'include'
             });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to add product: ${errorData.detail || response.statusText}`);
-            }
-            const newProduct = await response.json();
-            Alpine.store("GlobalVariable").products.data.push(newProduct);
-            Alpine.store("GlobalVariable").products.total += 1;
-            return newProduct;
+            if (!response.ok) throw new Error('Failed to fetch CSRF token');
+            this.csrfToken = this.getCookie('csrftoken');
         } catch (error) {
-            console.error("Error adding product:", error);
-            throw error;
+            console.error('Error fetching CSRF token:', error);
+            this.errorMessage = 'Failed to initialize CSRF protection';
         }
     },
 
-    async addToCart(product) {
-        try {
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/carts/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: product.id, quantity: 1 }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to add to cart: ${errorData.detail || response.statusText}`);
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
-            const cartItem = await response.json();
-            const newItem = {
-                id: cartItem.product_id,
-                name: product.name,
-                price: product.price,
-                quantity: cartItem.quantity,
-                image: product.image
-            };
-            if (!Alpine.store("GlobalVariable").cart.cart_id) {
-                Alpine.store("GlobalVariable").cart.cart_id = cartItem.cart_id;
-            }
-            const existingItem = Alpine.store("GlobalVariable").cart.data.find(item => item.id === newItem.id);
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                Alpine.store("GlobalVariable").cart.data.push(newItem);
-            }
-            Alpine.store("GlobalVariable").cart.total = Alpine.store("GlobalVariable").cart.data.reduce((sum, item) => sum + item.quantity, 0);
-        } catch (error) {
-            console.error("Error adding to cart:", error);
-            throw error;
+            return cookieValue;
         }
-    },
+    });
 
-    async removeFromCart(item) {
-        try {
-            const cartId = Alpine.store("GlobalVariable").cart.cart_id;
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/carts/${cartId}/items/${item.id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to remove from cart: ${errorData.detail || response.statusText}`);
+    Alpine.store("GlobalFunctions", {
+        async ensureCsrfToken() {
+            if (!Alpine.store("GlobalVariable").csrfToken) {
+                await Alpine.store("GlobalVariable").fetchCsrfToken();
             }
-            Alpine.store("GlobalVariable").cart.data = Alpine.store("GlobalVariable").cart.data.filter(cartItem => cartItem.id !== item.id);
-            Alpine.store("GlobalVariable").cart.total = Alpine.store("GlobalVariable").cart.data.reduce((sum, item) => sum + item.quantity, 0);
-            if (!Alpine.store("GlobalVariable").cart.data.length) {
-                Alpine.store("GlobalVariable").cart.cart_id = null;
-            }
-        } catch (error) {
-            console.error("Error removing from cart:", error);
-            throw error;
-        }
-    },
+            return Alpine.store("GlobalVariable").csrfToken;
+        },
 
-    async updateCartItem(item) {
-        try {
-            const cartId = Alpine.store("GlobalVariable").cart.cart_id;
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/carts/${cartId}/items/${item.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantity: item.quantity }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to update cart item: ${errorData.detail || response.statusText}`);
+        async fetchContacts() {
+            try {
+                const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/contacts/`, {
+                    headers: { "Content-Type": "application/json" },
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                Alpine.store("GlobalVariable").contacts.data = data;
+                Alpine.store("GlobalVariable").contacts.total = data.length;
+            } catch (error) {
+                console.error("Error fetching contacts:", error);
+                Alpine.store("GlobalVariable").errorMessage = `Failed to load contacts: ${error.message}`;
+                $('.ui.error.message').show().delay(3000).fadeOut();
             }
-            const cartItem = Alpine.store("GlobalVariable").cart.data.find(cartItem => cartItem.id === item.id);
-            if (cartItem) {
-                cartItem.quantity = item.quantity;
-            }
-            Alpine.store("GlobalVariable").cart.total = Alpine.store("GlobalVariable").cart.data.reduce((sum, item) => sum + item.quantity, 0);
-        } catch (error) {
-            console.error("Error updating cart item:", error);
-            throw error;
-        }
-    },
+        },
 
-    async fetchOrders() {
-        try {
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/checkouts/`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to fetch orders: ${errorData.detail || response.statusText}`);
+        async loadContent(path) {
+            Alpine.store("GlobalVariable").loading = true;
+            try {
+                const response = await fetch(`${path}.html`);
+                if (!response.ok) throw new Error('Failed to load content');
+                Alpine.store("GlobalVariable").content = await response.text();
+            } catch (error) {
+                Alpine.store("GlobalVariable").content = `<div class="ui error message">Error loading content: ${error.message}</div>`;
+            } finally {
+                Alpine.store("GlobalVariable").loading = false;
             }
-            const data = await response.json();
-            Alpine.store("GlobalVariable").orders.data = data;
-            Alpine.store("GlobalVariable").orders.total = data.length;
-        } catch (error) {
-            console.error("Error fetching orders:", error);
-        }
-    },
+        },
 
-    async confirmCheckout(checkoutData) {
-        try {
-            const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/checkouts/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(checkoutData),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to confirm checkout: ${errorData.detail || response.statusText}`);
+        async fetchCart() {
+            Alpine.store("GlobalVariable").loading = true;
+            try {
+                const response = await fetch(`${Alpine.store("settings").apiBaseUrl}/carts/`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Failed to fetch carts');
+                Alpine.store("GlobalVariable").carts = await response.json();
+                Alpine.store("GlobalVariable").cart.totalItems = Alpine.store("GlobalVariable").carts.reduce((total, cart) => 
+                    total + cart.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+            } catch (error) {
+                console.error('Error fetching carts:', error);
+                Alpine.store("GlobalVariable").errorMessage = `Failed to load carts: ${error.message}`;
+                $('.ui.error.message').show().delay(3000).fadeOut();
+            } finally {
+                Alpine.store("GlobalVariable").loading = false;
             }
-            const order = await response.json();
-            Alpine.store("GlobalVariable").cart.data = [];
-            Alpine.store("GlobalVariable").cart.total = 0;
-            Alpine.store("GlobalVariable").cart.cart_id = null;
-            Alpine.store("GlobalVariable").orders.data.push(order);
-            Alpine.store("GlobalVariable").orders.total += 1;
-            return order;
-        } catch (error) {
-            console.error("Error confirming checkout:", error);
-            throw error;
-        }
-    },
+        },
+
+        async addToCart(productId, quantity) {
+            Alpine.store("GlobalVariable").loading = true;
+            try {
+                await this.ensureCsrfToken();
+                let activeCart = Alpine.store("GlobalVariable").carts.find(cart => cart.status === 'ACTIVE');
+                let url, method, body;
+
+                if (activeCart) {
+                    url = `${Alpine.store("settings").apiBaseUrl}/carts/${activeCart.id}/items/${productId}/`;
+                    method = 'PATCH';
+                    body = JSON.stringify({ quantity });
+                } else {
+                    url = `${Alpine.store("settings").apiBaseUrl}/carts/`;
+                    method = 'POST';
+                    body = JSON.stringify({ product_id: productId, quantity });
+                }
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': Alpine.store("GlobalVariable").csrfToken
+                    },
+                    credentials: 'include',
+                    body
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to add to cart');
+                }
+                await this.fetchCart();
+                return { success: true, message: 'Product added to cart!' };
+            } catch (error) {
+                Alpine.store("GlobalVariable").errorMessage = error.message;
+                $('.ui.error.message').show().delay(3000).fadeOut();
+                return { success: false, message: error.message };
+            } finally {
+                Alpine.store("GlobalVariable").loading = false;
+            }
+        },
+
+        navigateTo(route) {
+            window.navigateTo(route);
+        },
+    });
+
+    $(document).ready(() => {
+        $('.ui.dropdown').dropdown({ on: 'click' });
+    });
 });
-
-document.addEventListener("DOMContentLoaded", () => {
-    Alpine.store("GlobalFunctions").fetchProducts();
-    Alpine.store("GlobalFunctions").fetchOrders();
-});
-

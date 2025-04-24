@@ -1,0 +1,56 @@
+<div class="ui container" style="margin-top: 20px;" x-data="contactSingle">
+    <div class="ui raised segment">
+        <!-- Header Section -->
+        <h2 class="ui header">
+            <i class="user icon"></i>
+            <div class="content">
+                Contact Details
+                <div class="sub header">View contact information</div>
+            </div>
+        </h2>
+
+        <!-- Contact Details -->
+        <div class="ui list">
+            <div class="item">
+                <strong>Contact ID:</strong> <span x-text="contact.id"></span>
+            </div>
+            <div class="item">
+                <strong>First Name:</strong> <span x-text="contact.first_name"></span>
+            </div>
+            <div class="item">
+                <strong>Last Name:</strong> <span x-text="contact.last_name"></span>
+            </div>
+            <div class="item">
+                <strong>Email:</strong> <span x-text="contact.email"></span>
+            </div>
+            <div class="item">
+                <strong>Phone Number:</strong> <span x-text="contact.phone_number"></span>
+            </div>
+            <div class="item">
+                <strong>Address:</strong> <span x-text="contact.address"></span>
+            </div>
+        </div>
+
+        <div class="ui divider"></div>
+
+        <div class="ui buttons">
+            <button class="ui primary button" @click.prevent="navigateTo('contacts/contact_edit?id=' + contact.id)">
+                <i class="edit icon"></i> Edit Contact
+            </button>
+            <button class="ui button" @click.prevent="navigateTo('contacts/contact_all')">
+                <i class="arrow left icon"></i> Back to List
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    Alpine.data("contactSingle", () => ({
+        contact: {},
+
+        init() {
+            const contactId = Alpine.store('GlobalVariable').queryParams.id;
+            this.contact = Alpine.store("GlobalFunctions").findContactById(contactId);
+        }
+    }));
+</script>
